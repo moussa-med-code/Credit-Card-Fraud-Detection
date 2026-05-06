@@ -1,0 +1,34 @@
+# Configuration des hyperparamètres pour XGBoost
+# Dataset Credit Card Fraud Detection (0.17% fraudes)
+
+# Paramètres de base
+base:
+  random_state: 42
+  eval_metric: "aucpr"           # AUPRC adapté au déséquilibre extrême
+  n_estimators: 500              # Nombre max d'arbres (early stopping actif)
+  early_stopping_rounds: 30      # Arrêt si pas d'amélioration après 30 rounds
+  verbosity: 0                   # Silence pendant l'entraînement
+
+# Architecture du modèle
+architecture:
+  max_depth: 5                   # Profondeur limitée (éviter overfitting sur fraudes)
+  learning_rate: 0.1             # Taux d'apprentissage modéré
+  subsample: 0.8                 # Fraction d'échantillons par arbre
+  colsample_bytree: 0.8          # Fraction de features par arbre
+  min_child_weight: 1            # Poids minimum par feuille
+
+# Régularisation (critique pour données déséquilibrées)
+regularization:
+  gamma: 0.1                     # Réduction de perte minimum pour split
+  reg_alpha: 0.01                # Régularisation L1 (Lasso)
+  reg_lambda: 1.0                # Régularisation L2 (Ridge)
+
+# Cross-validation
+cross_validation:
+  n_folds: 5                     # StratifiedKFold
+  scoring: "average_precision"   # Métrique principale : AUPRC
+
+# Seuil de décision (à optimiser après entraînement)
+threshold:
+  default: 0.5                   # Seuil par défaut
+  optimization_metric: "f1"      # Métrique pour optimisation du seuil
