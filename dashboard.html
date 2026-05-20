@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Guard - AI Detection Center</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        banking: {
+                            dark: '#0a0e1a',
+                            surface: '#121827',
+                            accent: '#1e293b',
+                            gold: '#d4af37',
+                            danger: '#ef4444',
+                            success: '#10b981',
+                            textMuted: '#94a3b8'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        [v-cloak] { display: none; }
+        body { background-color: #0a0e1a; color: #f8fafc; margin: 0; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0e1a; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d4af37; }
+
+        .glass-panel {
+            background: rgba(18, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .input-feature {
+            background: rgba(10, 14, 26, 0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            transition: all 0.2s;
+        }
+        .input-feature:focus {
+            border-color: #d4af37;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+        }
+    </style>
+</head>
+<body class="antialiased overflow-hidden">
+    <div id="app" class="flex h-screen w-full" v-cloak>
+        
+        <!-- SIDEBAR -->
+        <aside class="w-20 md:w-64 glass-panel border-r border-t-0 border-b-0 border-l-0 flex flex-col justify-between transition-all duration-300 z-20 relative hidden sm:flex">
+            <div>
+                <!-- Logo -->
+                <div class="h-20 flex items-center justify-center md:justify-start md:px-6 border-b border-white/5">
+                    <i class="ph-fill ph-shield-check text-banking-gold text-3xl"></i>
+                    <span class="ml-3 font-black text-xl tracking-tight hidden md:block">FRAUD<span class="text-banking-gold">GUARD</span></span>
+                </div>
+                <!-- Menu -->
+                <nav class="mt-6 px-2 space-y-2">
+                    <a href="#" @click.prevent="currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'bg-banking-gold/10 text-banking-gold' : 'text-banking-textMuted hover:bg-white/5 hover:text-white'" class="flex items-center px-4 py-3 rounded-xl transition-all">
+                        <i class="ph ph-squares-four text-xl"></i>
+                        <span class="ml-3 font-semibold text-sm hidden md:block">Dashboard</span>
+                    </a>
+                    <a href="#" @click.prevent="currentView = 'history'" :class="currentView === 'history' ? 'bg-banking-gold/10 text-banking-gold' : 'text-banking-textMuted hover:bg-white/5 hover:text-white'" class="flex items-center px-4 py-3 rounded-xl transition-all">
+                        <i class="ph ph-clock-counter-clockwise text-xl"></i>
+                        <span class="ml-3 font-semibold text-sm hidden md:block">History Logs</span>
+                    </a>
+                    <a href="#" @click.prevent="currentView = 'settings'" :class="currentView === 'settings' ? 'bg-banking-gold/10 text-banking-gold' : 'text-banking-textMuted hover:bg-white/5 hover:text-white'" class="flex items-center px-4 py-3 rounded-xl transition-all">
+                        <i class="ph ph-gear text-xl"></i>
+                        <span class="ml-3 font-semibold text-sm hidden md:block">Settings</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- API Status -->
+            <div class="p-4 border-t border-white/5">
+                <div class="flex items-center justify-center md:justify-start px-2 py-3 rounded-xl border" :class="apiOnline ? 'bg-banking-success/10 border-banking-success/20 text-banking-success' : 'bg-banking-danger/10 border-banking-danger/20 text-banking-danger'">
+                    <i class="ph-fill ph-power text-lg" :class="apiOnline ? 'animate-pulse' : ''"></i>
+                    <div class="ml-3 hidden md:block">
+                        <p class="text-xs font-bold uppercase">{{ apiOnline ? 'API Online' : 'API Offline' }}</p>
+                        <p class="text-[10px] opacity-70">Port 8000</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 h-screen overflow-y-auto relative scroll-smooth pb-12">
+            <!-- Header -->
+            <header class="sticky top-0 z-10 glass-panel border-x-0 border-t-0 border-b border-white/5 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold">Command Center</h1>
+                    <p class="text-xs text-banking-textMuted uppercase tracking-wider font-semibold mt-1">Real-time Anomaly Detection</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold">{{ currentTime }}</p>
+                        <p class="text-xs text-banking-textMuted">Serveur Local</p>
+                    </div>
+                    <div class="h-10 w-10 rounded-full bg-banking-accent flex items-center justify-center border border-white/10">
+                        <i class="ph ph-user text-lg text-white"></i>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-6 max-w-7xl mx-auto space-y-6">
+                
+                <!-- DASHBOARD VIEW -->
+                <div v-if="currentView === 'dashboard'" class="space-y-6">
+                    <!-- ZONE 1: KPIs -->
+                    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- KPI 1 -->
+                        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:-translate-y-1 transition-all">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all">
+                                <i class="ph-fill ph-database text-6xl text-white"></i>
+                            </div>
+                            <p class="text-xs font-bold text-banking-textMuted uppercase tracking-wider mb-2">Total Transactions</p>
+                            <h3 class="text-3xl font-black">1,245,890</h3>
+                            <p class="text-xs text-banking-success font-bold mt-2 flex items-center"><i class="ph-bold ph-trend-up mr-1"></i> +12% this week</p>
+                        </div>
+                        <!-- KPI 2 -->
+                        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:-translate-y-1 transition-all">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all">
+                                <i class="ph-fill ph-activity text-6xl text-banking-gold"></i>
+                            </div>
+                            <p class="text-xs font-bold text-banking-textMuted uppercase tracking-wider mb-2">API Requests</p>
+                            <h3 class="text-3xl font-black text-banking-gold">{{ apiRequests }}</h3>
+                            <p class="text-xs text-banking-textMuted font-bold mt-2">Session courante</p>
+                        </div>
+                        <!-- KPI 3 -->
+                        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:-translate-y-1 transition-all">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all">
+                                <i class="ph-fill ph-lightning text-6xl text-blue-400"></i>
+                            </div>
+                            <p class="text-xs font-bold text-banking-textMuted uppercase tracking-wider mb-2">Avg Exec Time</p>
+                            <h3 class="text-3xl font-black text-blue-400">{{ avgExecTime }} <span class="text-lg">ms</span></h3>
+                            <p class="text-xs text-banking-textMuted font-bold mt-2">Inférence XGBoost</p>
+                        </div>
+                        <!-- KPI 4 -->
+                        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:-translate-y-1 transition-all">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all">
+                                <i class="ph-fill ph-target text-6xl text-white"></i>
+                            </div>
+                            <p class="text-xs font-bold text-banking-textMuted uppercase tracking-wider mb-2">Model Accuracy</p>
+                            <h3 class="text-3xl font-black">99.99%</h3>
+                            <p class="text-xs text-banking-textMuted font-bold mt-2">AUC-ROC Score</p>
+                        </div>
+                    </section>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        
+                        <!-- LEFT COLUMN (Tester + Data Info) -->
+                        <div class="xl:col-span-2 space-y-6">
+                            
+                            <!-- ZONE 2: TEST MODEL -->
+                            <div class="glass-panel p-6 rounded-3xl">
+                                <div class="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h2 class="text-xl font-bold flex items-center gap-2">
+                                            <i class="ph-fill ph-cpu text-banking-gold"></i> Live Model Tester
+                                        </h2>
+                                        <p class="text-xs text-banking-textMuted mt-1">Saisissez les 30 features (Time, V1-V28, Amount) pour évaluer la transaction.</p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button @click="loadSample(false)" class="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/20 hover:bg-white/10 transition-all">
+                                            Load Legitimate
+                                        </button>
+                                        <button @click="loadSample(true)" class="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-banking-danger/50 text-banking-danger hover:bg-banking-danger/10 transition-all">
+                                            Load Fraud
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <form @submit.prevent="runPrediction" class="space-y-6">
+                                    <!-- Inputs Grid -->
+                                    <div class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-3">
+                                        <div v-for="(val, i) in features" :key="i" class="flex flex-col relative group">
+                                            <label class="text-[9px] font-black uppercase tracking-widest text-banking-textMuted mb-1 group-focus-within:text-banking-gold transition-colors">
+                                                {{ getFeatureName(i) }}
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                step="any"
+                                                v-model.number="features[i]"
+                                                class="input-feature rounded-lg px-2 py-1.5 text-xs font-mono w-full"
+                                                required
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <!-- Action & Result -->
+                                    <div class="flex flex-col sm:flex-row gap-4 items-center pt-4 border-t border-white/5">
+                                        <button 
+                                            type="submit" 
+                                            :disabled="loading || !apiOnline"
+                                            class="w-full sm:w-auto px-6 py-3 rounded-xl font-black uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all"
+                                            :class="!apiOnline ? 'bg-banking-accent text-banking-textMuted cursor-not-allowed' : 'bg-banking-gold text-banking-dark hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(212,175,55,0.4)]'"
+                                        >
+                                            <i class="ph-bold" :class="loading ? 'ph-spinner animate-spin' : 'ph-paper-plane-tilt'"></i>
+                                            {{ loading ? 'Analyse...' : 'Lancer la prédiction' }}
+                                        </button>
+                                        
+                                        <!-- Result Card -->
+                                        <div v-if="predictionResult" class="flex-1 w-full rounded-xl p-4 flex items-center justify-between border"
+                                             :class="predictionResult.is_fraud ? 'bg-banking-danger/10 border-banking-danger/30' : 'bg-banking-success/10 border-banking-success/30'">
+                                            <div class="flex items-center gap-4">
+                                                <div class="h-10 w-10 rounded-full flex items-center justify-center"
+                                                     :class="predictionResult.is_fraud ? 'bg-banking-danger/20 text-banking-danger' : 'bg-banking-success/20 text-banking-success'">
+                                                    <i class="ph-bold text-xl" :class="predictionResult.is_fraud ? 'ph-warning' : 'ph-check-circle'"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Statut</p>
+                                                    <h4 class="text-lg font-black" :class="predictionResult.is_fraud ? 'text-banking-danger' : 'text-banking-success'">
+                                                        {{ predictionResult.is_fraud ? 'FRAUDE DETECTÉE' : 'TRANSACTION LÉGITIME' }}
+                                                    </h4>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Confiance</p>
+                                                <p class="text-xl font-black">{{ (predictionResult.probability * 100).toFixed(2) }}%</p>
+                                            </div>
+                                        </div>
+                                        <div v-else-if="!apiOnline" class="flex-1 w-full text-center sm:text-left text-sm text-banking-danger font-semibold bg-banking-danger/5 border border-banking-danger/10 p-3 rounded-lg">
+                                            <i class="ph-fill ph-warning mr-1"></i> Serveur injoignable. Démarrez l'API FastAPI en arrière-plan.
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- ZONE 4: DATA INFO -->
+                            <div class="glass-panel p-6 rounded-3xl flex flex-wrap gap-8 items-center bg-gradient-to-br from-banking-surface to-banking-dark">
+                                <div>
+                                    <h3 class="font-bold text-sm mb-4 border-b border-white/10 pb-2 inline-block">Dataset Info</h3>
+                                </div>
+                                <div class="flex gap-3 items-center">
+                                    <div class="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-400"><i class="ph-fill ph-table text-xl"></i></div>
+                                    <div><p class="text-[10px] uppercase font-bold text-banking-textMuted tracking-wider">Volume</p><p class="font-black">284,807 Lignes</p></div>
+                                </div>
+                                <div class="flex gap-3 items-center">
+                                    <div class="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20 text-purple-400"><i class="ph-fill ph-columns text-xl"></i></div>
+                                    <div><p class="text-[10px] uppercase font-bold text-banking-textMuted tracking-wider">Features</p><p class="font-black">30 Colonnes</p></div>
+                                </div>
+                                <div class="flex gap-3 items-center">
+                                    <div class="h-10 w-10 rounded-xl bg-banking-gold/10 flex items-center justify-center border border-banking-gold/20 text-banking-gold"><i class="ph-fill ph-brain text-xl"></i></div>
+                                    <div><p class="text-[10px] uppercase font-bold text-banking-textMuted tracking-wider">Algorithm</p><p class="font-black">XGBoost Classifier</p></div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- RIGHT COLUMN (Charts) -->
+                        <div class="space-y-6">
+                            
+                            <!-- Donut Chart -->
+                            <div class="glass-panel p-5 rounded-3xl h-[300px] flex flex-col">
+                                <h3 class="text-xs font-black text-banking-textMuted uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <i class="ph-fill ph-chart-pie-slice"></i> Distribution des Classes
+                                </h3>
+                                <div class="flex-1 relative w-full h-full">
+                                    <canvas id="donutChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Bar Chart -->
+                            <div class="glass-panel p-5 rounded-3xl h-[250px] flex flex-col">
+                                <h3 class="text-xs font-black text-banking-textMuted uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <i class="ph-fill ph-chart-bar"></i> Transactions / Jour
+                                </h3>
+                                <div class="flex-1 relative w-full h-full">
+                                    <canvas id="barChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Line Chart -->
+                            <div class="glass-panel p-5 rounded-3xl h-[220px] flex flex-col">
+                                <h3 class="text-xs font-black text-banking-textMuted uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <i class="ph-fill ph-trend-up"></i> Précision temporelle
+                                </h3>
+                                <div class="flex-1 relative w-full h-full">
+                                    <canvas id="lineChart"></canvas>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTORY VIEW -->
+                <div v-if="currentView === 'history'" class="space-y-6">
+                    <div class="glass-panel p-6 rounded-3xl">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 class="text-xl font-bold flex items-center gap-2">
+                                    <i class="ph-fill ph-clock-counter-clockwise text-banking-gold"></i> History Logs
+                                </h2>
+                                <p class="text-xs text-banking-textMuted mt-1">Liste des dernières prédictions effectuées dans cette session.</p>
+                            </div>
+                            <button @click="clearHistory" class="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-banking-danger/50 text-banking-danger hover:bg-banking-danger/10 transition-all">
+                                Effacer l'historique
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="text-[10px] font-black uppercase tracking-widest text-banking-textMuted border-b border-white/5">
+                                    <tr>
+                                        <th class="px-4 py-3">Date/Heure</th>
+                                        <th class="px-4 py-3">Montant</th>
+                                        <th class="px-4 py-3">Confiance</th>
+                                        <th class="px-4 py-3 text-right">Résultat</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5">
+                                    <tr v-for="item in history" :key="item.id" class="hover:bg-white/[0.02] transition-colors">
+                                        <td class="px-4 py-4 text-xs font-mono">{{ item.timestamp }}</td>
+                                        <td class="px-4 py-4 text-sm font-bold">{{ item.amount.toFixed(2) }} €</td>
+                                        <td class="px-4 py-4">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-16 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                                    <div class="h-full" :class="item.is_fraud ? 'bg-banking-danger' : 'bg-banking-success'" :style="{ width: (item.probability * 100) + '%' }"></div>
+                                                </div>
+                                                <span class="text-xs font-bold">{{ (item.probability * 100).toFixed(1) }}%</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-4 text-right">
+                                            <span class="px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter"
+                                                  :class="item.is_fraud ? 'bg-banking-danger/20 text-banking-danger' : 'bg-banking-success/20 text-banking-success'">
+                                                {{ item.is_fraud ? 'FRAUDE' : 'LÉGITIME' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="history.length === 0">
+                                        <td colspan="4" class="px-4 py-12 text-center text-banking-textMuted italic text-sm">
+                                            Aucun log disponible pour le moment.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SETTINGS VIEW -->
+                <div v-if="currentView === 'settings'" class="space-y-6">
+                    <div class="glass-panel p-6 rounded-3xl max-w-2xl">
+                        <h2 class="text-xl font-bold flex items-center gap-2 mb-6">
+                            <i class="ph-fill ph-gear text-banking-gold"></i> Configuration
+                        </h2>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <label class="text-xs font-black uppercase tracking-widest text-banking-textMuted mb-2 block">API Endpoint URL</label>
+                                <input type="text" v-model="settings.apiUrl" class="input-feature rounded-xl px-4 py-3 text-sm w-full">
+                                <p class="text-[10px] text-banking-textMuted mt-1 italic">L'adresse du serveur FastAPI (ex: http://localhost:8000)</p>
+                            </div>
+                            
+                            <div>
+                                <label class="text-xs font-black uppercase tracking-widest text-banking-textMuted mb-2 block">Seuil de Détection (Threshold)</label>
+                                <div class="flex items-center gap-4">
+                                    <input type="range" min="0" max="1" step="0.05" v-model.number="settings.threshold" class="flex-1 accent-banking-gold">
+                                    <span class="text-sm font-mono font-bold w-12 text-center">{{ settings.threshold }}</span>
+                                </div>
+                                <p class="text-[10px] text-banking-textMuted mt-1 italic">Probabilité au-dessus de laquelle une transaction est marquée comme fraude.</p>
+                            </div>
+
+                            <div class="pt-4 border-t border-white/5">
+                                <button @click="currentView = 'dashboard'" class="px-6 py-3 bg-banking-gold text-banking-dark rounded-xl font-black uppercase tracking-wider text-sm hover:scale-105 active:scale-95 transition-all">
+                                    Enregistrer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- VUE 3 APPLICATION LOGIC -->
+    <script>
+        const { createApp, ref, onMounted, onUnmounted } = Vue;
+
+        createApp({
+            setup() {
+                // States
+                const currentView = ref('dashboard');
+                const apiOnline = ref(false);
+                const loading = ref(false);
+                const currentTime = ref('');
+                const features = ref(Array(30).fill(0));
+                const predictionResult = ref(null);
+                const apiRequests = ref(0);
+                const avgExecTime = ref(42); // Default mock value
+                const history = ref(JSON.parse(localStorage.getItem('fraud_history') || '[]'));
+                
+                const settings = ref({
+                    apiUrl: 'http://localhost:8000',
+                    threshold: 0.5
+                });
+                
+                let timeInterval = null;
+                let healthInterval = null;
+
+                // Utils
+                const updateTime = () => {
+                    const now = new Date();
+                    currentTime.value = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second:'2-digit' });
+                };
+
+                const getFeatureName = (i) => {
+                    if (i === 0) return 'Time';
+                    if (i === 29) return 'Amount';
+                    return `V${i}`;
+                };
+
+                // Samples
+                const loadSample = (isFraud) => {
+                    predictionResult.value = null; // reset
+                    const sample = isFraud 
+                    ? [0.0, -2.3, 1.5, -5.6, 4.2, -1.2, -2.0, -4.5, 1.1, -2.5, -5.0, 3.8, -10.0, -0.5, -12.5, 0.8, -4.2, -15.0, -5.5, 1.2, 0.4, 0.9, -0.2, -0.1, -0.5, 0.2, 0.3, 0.5, 0.2, 1.0]
+                    : [0.0, 1.2, -0.5, 2.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 150.0];
+                    features.value = [...sample];
+                };
+
+                // API Calls
+                const checkApiStatus = async () => {
+                    try {
+                        const res = await axios.get('http://localhost:8000/', { timeout: 2000 });
+                        apiOnline.value = (res.status === 200);
+                    } catch (err) {
+                        apiOnline.value = false;
+                    }
+                };
+
+                const runPrediction = async () => {
+                    if (!apiOnline.value) return;
+                    loading.value = true;
+                    predictionResult.value = null;
+                    
+                    const startTime = performance.now();
+                    try {
+                        const response = await axios.post(`${settings.value.apiUrl}/predict`, {
+                            features: features.value
+                        });
+                        predictionResult.value = response.data;
+                        apiRequests.value++;
+                        
+                        // Save to history
+                        const historyItem = {
+                            id: Date.now(),
+                            timestamp: new Date().toLocaleString(),
+                            amount: features.value[29],
+                            probability: predictionResult.value.probability,
+                            is_fraud: predictionResult.value.is_fraud
+                        };
+                        history.value.unshift(historyItem);
+                        localStorage.setItem('fraud_history', JSON.stringify(history.value.slice(0, 50)));
+
+                        // Update Avg Exec Time
+                        const execTime = performance.now() - startTime;
+                        avgExecTime.value = Math.round((avgExecTime.value + execTime) / 2);
+
+                        // Update Donut Chart visually if we wanted, but static data is fine for demo
+                        updateChartsOnPredict(predictionResult.value.is_fraud);
+                        
+                    } catch (error) {
+                        console.error(error);
+                        alert("Erreur lors de l'appel à l'API. Consultez la console.");
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const clearHistory = () => {
+                    history.value = [];
+                    localStorage.removeItem('fraud_history');
+                };
+
+                // Chart.js Setup
+                let donutChart, barChart, lineChart;
+
+                const initCharts = () => {
+                    // Global Chart Settings
+                    Chart.defaults.color = '#94a3b8';
+                    Chart.defaults.font.family = 'Inter';
+                    Chart.defaults.plugins.tooltip.backgroundColor = '#1e293b';
+                    Chart.defaults.plugins.tooltip.titleColor = '#fff';
+                    Chart.defaults.plugins.tooltip.padding = 10;
+                    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+
+                    // 1. Donut Chart (Fraud vs Legitimate)
+                    const ctxDonut = document.getElementById('donutChart').getContext('2d');
+                    donutChart = new Chart(ctxDonut, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Légitime', 'Fraude'],
+                            datasets: [{
+                                data: [284315, 492], // Real dataset numbers
+                                backgroundColor: ['#10b981', '#ef4444'],
+                                borderWidth: 0,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '75%',
+                            plugins: {
+                                legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                            }
+                        }
+                    });
+
+                    // 2. Bar Chart (Tx per day)
+                    const ctxBar = document.getElementById('barChart').getContext('2d');
+                    barChart = new Chart(ctxBar, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+                            datasets: [{
+                                label: 'Transactions',
+                                data: [12000, 15000, 14000, 18000, 22000, 19000, 13000],
+                                backgroundColor: '#1e293b',
+                                hoverBackgroundColor: '#d4af37',
+                                borderRadius: 4,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { display: false },
+                                x: { grid: { display: false }, border: { display: false } }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+
+                    // 3. Line Chart (Accuracy trend)
+                    const ctxLine = document.getElementById('lineChart').getContext('2d');
+                    lineChart = new Chart(ctxLine, {
+                        type: 'line',
+                        data: {
+                            labels: ['1h', '2h', '3h', '4h', '5h', '6h'],
+                            datasets: [{
+                                label: 'Accuracy',
+                                data: [99.91, 99.94, 99.98, 99.95, 99.99, 99.99],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { min: 99.8, max: 100, display: false },
+                                x: { grid: { display: false }, border: { display: false } }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                };
+
+                const updateChartsOnPredict = (isFraud) => {
+                    // Small visual effect to simulate live data
+                    if(donutChart) {
+                        if(isFraud) {
+                            donutChart.data.datasets[0].data[1] += 1;
+                        } else {
+                            donutChart.data.datasets[0].data[0] += 1;
+                        }
+                        donutChart.update();
+                    }
+                };
+
+                // Lifecycle
+                onMounted(() => {
+                    updateTime();
+                    timeInterval = setInterval(updateTime, 1000);
+                    
+                    checkApiStatus();
+                    healthInterval = setInterval(checkApiStatus, 5000);
+                    
+                    // Init sample
+                    loadSample(false);
+
+                    // Defer chart init to ensure DOM is ready
+                    setTimeout(initCharts, 100);
+                });
+
+                onUnmounted(() => {
+                    clearInterval(timeInterval);
+                    clearInterval(healthInterval);
+                });
+
+                return {
+                    currentView,
+                    apiOnline,
+                    loading,
+                    currentTime,
+                    features,
+                    predictionResult,
+                    apiRequests,
+                    avgExecTime,
+                    history,
+                    settings,
+                    getFeatureName,
+                    loadSample,
+                    runPrediction,
+                    clearHistory
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

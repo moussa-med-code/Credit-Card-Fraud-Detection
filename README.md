@@ -6,8 +6,7 @@ Ce projet est une solution complète (End-to-End) de détection de fraude bancai
 - **Pipeline de données optimisé** : Utilisation du format Parquet pour la rapidité.
 - **Gestion du déséquilibre** : Calcul automatique du `scale_pos_weight` pour les classes minoritaires.
 - **Modèle performant** : XGBoost avec Early Stopping et Cross-Validation stratifiée.
-- **Multi-interface** : FastAPI (Inférence), Streamlit (Dashboard) et Gradio (Test).
-- **Industrialisation** : Entièrement conteneurisé avec Docker.
+- **Multi-interface** : FastAPI (Inférence), Dashboard HTML (Vue.js), Streamlit et Gradio.
 
 ## 📁 Structure du Projet
 ```text
@@ -17,6 +16,7 @@ Ce projet est une solution complète (End-to-End) de détection de fraude bancai
 │   ├── api/            # FastAPI, Streamlit, Gradio
 │   ├── models/         # Logique du modèle et hyperparamètres
 │   └── preprocessing/  # Transformation des données
+├── dashboard.html      # Interface utilisateur moderne (HTML/Vue.js)
 ├── Dockerfile          # Configuration du conteneur
 └── requirements.txt    # Dépendances Python
 ```
@@ -47,6 +47,13 @@ Idéal pour explorer le code ou réentraîner le modèle.
    ```bash
    uvicorn src.api.fastapi_app:app --reload
    ```
+
+5. **Accéder au Dashboard :**
+   Ouvrez simplement le fichier `dashboard.html` dans votre navigateur ou lancez Streamlit :
+   ```bash
+   streamlit run src/api/streamlit_app.py
+   ```
+
 
 ---
 

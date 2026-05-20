@@ -12,10 +12,21 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.models.xgboost_model import FraudDetectionModel
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="API de Détection de Fraude Bancaire",
     description="Service d'inférence pour la détection de transactions frauduleuses utilisant XGBoost.",
     version="1.0.0"
+)
+
+# Configuration CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # À restreindre en production (ex: ["http://localhost:5173"])
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Modèle de données pour une transaction
@@ -79,7 +90,7 @@ def predict_fraud(transaction: Transaction):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erreur lors de l'inférence : {str(e)}")
 
-@app.post("/predict/batch")
+@app.post("/batch_predict")
 def predict_batch(transactions: List[Transaction]):
     if model is None:
         raise HTTPException(status_code=503, detail="Modèle non disponible")
