@@ -140,7 +140,7 @@
             <div class="p-6 max-w-7xl mx-auto space-y-6">
                 
                 <!-- DASHBOARD VIEW -->
-                <div v-if="currentView === 'dashboard'" class="space-y-6">
+                <div v-show="currentView === 'dashboard'" class="space-y-6">
                     <!-- ZONE 1: KPIs -->
                     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <!-- KPI 1 -->
@@ -320,7 +320,7 @@
                 </div>
 
                 <!-- HISTORY VIEW -->
-                <div v-if="currentView === 'history'" class="space-y-6">
+                <div v-show="currentView === 'history'" class="space-y-6">
                     <div class="glass-panel p-6 rounded-3xl">
                         <div class="flex justify-between items-center mb-6">
                             <div>
@@ -375,7 +375,7 @@
                 </div>
 
                 <!-- SETTINGS VIEW -->
-                <div v-if="currentView === 'settings'" class="space-y-6">
+                <div v-show="currentView === 'settings'" class="space-y-6">
                     <div class="glass-panel p-6 rounded-3xl max-w-2xl">
                         <h2 class="text-xl font-bold flex items-center gap-2 mb-6">
                             <i class="ph-fill ph-gear text-banking-gold"></i> Configuration
@@ -422,7 +422,7 @@
                 const currentTime = ref('');
                 const features = ref(Array(30).fill(0));
                 const predictionResult = ref(null);
-                const apiRequests = ref(0);
+                const apiRequests = ref(parseInt(localStorage.getItem('api_requests') || '0'));
                 const avgExecTime = ref(42); // Default mock value
                 const history = ref(JSON.parse(localStorage.getItem('fraud_history') || '[]'));
                 
@@ -477,6 +477,7 @@
                         });
                         predictionResult.value = response.data;
                         apiRequests.value++;
+                        localStorage.setItem('api_requests', apiRequests.value.toString());
                         
                         // Save to history
                         const historyItem = {
@@ -507,6 +508,8 @@
                 const clearHistory = () => {
                     history.value = [];
                     localStorage.removeItem('fraud_history');
+                    apiRequests.value = 0;
+                    localStorage.setItem('api_requests', '0');
                 };
 
                 // Chart.js Setup
